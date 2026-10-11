@@ -1,16 +1,19 @@
 rules_version = '2';
 
-// Only the Google accounts listed below can read or change the family's expenses.
-// To add someone: add their Gmail address (lowercase) to the list, then click Publish in Firebase.
+// Only the accounts listed below can read or change the family's expenses.
+// Accounts are created by the family admin in Firebase (Authentication → Users → Add user),
+// and self sign-up is turned off, so nobody else can create an account for these emails.
+// To add someone: create their account, add their email (lowercase) below, then click Publish.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function isFamily() {
       return request.auth != null
-        && request.auth.token.email_verified == true
+        && (request.auth.token.email_verified == true
+            || request.auth.token.firebase.sign_in_provider == 'password')
         && request.auth.token.email.lower() in [
           'dexterp0223@gmail.com',
-          'add.family.member@gmail.com'
+          'jadexedric@yahoo.com'
         ];
     }
 

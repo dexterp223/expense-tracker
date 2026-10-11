@@ -140,10 +140,11 @@ tr.dup td{opacity:.55}
 <div class="gate" id="gate">
   <div class="panel gate-card">
     <h1>Expense Tracker</h1>
-    <p class="sub" style="margin:0">Enter the email address that was added to the family list. We'll email you a link to sign in.</p>
-    <input id="linkEmail" type="email" autocomplete="email" placeholder="Your email address">
-    <button class="btn primary" id="linkBtn">Email me a sign-in link</button>
-    <button id="signInBtn" hidden></button>
+    <p class="sub" style="margin:0">Sign in with the email and password set up for you.</p>
+    <label class="f">Email<input id="pwEmail" type="email" autocomplete="username" placeholder="you@example.com"></label>
+    <label class="f">Password<input id="pwPass" type="password" autocomplete="current-password"></label>
+    <button class="btn primary" id="signInBtn">Sign in</button>
+    <button class="btn" id="forgotBtn" type="button" style="border:0;background:none;color:var(--accent);justify-self:start;padding:0">Forgot password?</button>
     <div class="status" id="gateMsg" role="status"></div>
   </div>
 </div>
@@ -331,6 +332,13 @@ tr.dup td{opacity:.55}
     <div>
       <h2>Account</h2>
       <div class="row"><span>Signed in as <b id="who"></b></span><button class="btn" id="signOutBtn">Sign out</button></div>
+      <h3 style="margin:14px 0 6px;font-size:1rem">Change your password</h3>
+      <div class="row">
+        <input id="pwNew" type="password" autocomplete="new-password" placeholder="New password (6+ characters)" style="max-width:240px">
+        <input id="pwNew2" type="password" autocomplete="new-password" placeholder="Type it again" style="max-width:240px">
+        <button class="btn" id="pwChangeBtn">Change password</button>
+      </div>
+      <div class="status" id="pwChangeMsg" style="margin-top:6px"></div>
     </div>
     <div>
       <h2>Statement reading (optional)</h2>
@@ -1093,51 +1101,46 @@ let gateNote="";
 const cfg=window.FIREBASE_CONFIG;
 if(!window.firebase||!cfg||!cfg.apiKey||/^PASTE/.test(cfg.apiKey)){
   $("gateMsg").textContent="This copy isn't connected to a database yet. Fill in firebase-config.js as described in README.md.";
-  $("signInBtn").disabled=true; $("linkBtn").disabled=true;
+  $("signInBtn").disabled=true;
 }else{
   firebase.initializeApp(cfg);
   const auth=firebase.auth();
-  // Email-link sign-in (no pop-up needed)
-  const LINK_LS="et-link-email";
-  const linkMode=auth.isSignInWithEmailLink(location.href);
-  const finishLink=async em=>{
-    $("gateMsg").textContent="Signing you in…";
-    try{await auth.signInWithEmailLink(em,location.href);try{localStorage.removeItem(LINK_LS)}catch(e){}history.replaceState(null,"",location.pathname)}
-    catch(e){$("gateMsg").textContent="That sign-in link didn't work. It may have expired or already been used, or the email doesn't match. Request a new link. (Error code: "+((e&&e.code)||"unknown")+")"}
+  // Email + password sign-in. Accounts are created by the family admin in the Firebase console.
+  const authMsg=c=>({
+    "auth/invalid-credential":"The email or password is wrong. Check both and try again.",
+    "auth/wrong-password":"The email or password is wrong. Check both and try again.",
+    "auth/user-not-found":"There's no account for that email yet. Ask the person who set this up to create one.",
+    "auth/invalid-email":"That email address isn't valid.",
+    "auth/user-disabled":"This account has been turned off. Ask the person who set this up.",
+    "auth/too-many-requests":"Too many tries. Wait a few minutes, or use Forgot password.",
+    "auth/operation-not-allowed":"Password sign-in isn't turned on in Firebase. Enable Authentication → Sign-in method → Email/Password.",
+    "auth/network-request-failed":"Couldn't connect. Check your internet connection.",
+    "auth/weak-password":"Use at least 6 characters.",
+    "auth/requires-recent-login":"For security, sign out and sign back in, then change your password."
+  }[c]||"Something went wrong.")+" (Error code: "+c+")";
+  const doSignIn=async()=>{
+    const em=$("pwEmail").value.trim().toLowerCase(), pw=$("pwPass").value;
+    if(!em||!pw){$("gateMsg").textContent="Enter your email and password.";return}
+    $("signInBtn").disabled=true;$("gateMsg").textContent="Signing in…";
+    try{await auth.signInWithEmailAndPassword(em,pw);$("pwPass").value=""}
+    catch(e){$("gateMsg").textContent=authMsg((e&&e.code)||"unknown")}
+    finally{$("signInBtn").disabled=false}
   };
-  if(linkMode){
-    let em="";try{em=localStorage.getItem(LINK_LS)||""}catch(e){}
-    if(em)finishLink(em);
-    else{$("linkBtn").textContent="Finish sign-in";$("gateMsg").textContent="Type the email address this link was sent to, then click Finish sign-in.";}
-  }
-  $("linkBtn").onclick=async()=>{
-    const em=$("linkEmail").value.trim().toLowerCase();
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){$("gateMsg").textContent="Enter your email address first.";return}
-    if(linkMode&&!auth.currentUser)return finishLink(em);
-    $("linkBtn").disabled=true;$("gateMsg").textContent="Sending…";
-    try{
-      await auth.sendSignInLinkToEmail(em,{url:location.origin+location.pathname,handleCodeInApp:true});
-      try{localStorage.setItem(LINK_LS,em)}catch(e){}
-      $("gateMsg").textContent="Sign-in link sent to "+em+". Open it on this device and browser. Check your spam folder if it isn't there in a minute.";
-    }catch(e){
-      const c=(e&&e.code)||"unknown";
-      $("gateMsg").textContent=(c==="auth/operation-not-allowed"?"Email-link sign-in isn't turned on in Firebase yet. Enable it under Authentication → Sign-in method → Email/Password → Email link.":c==="auth/quota-exceeded"?"Too many sign-in emails today. Try again tomorrow.":"Couldn't send the sign-in link.")+" (Error code: "+c+")";
-    }finally{$("linkBtn").disabled=false}
+  $("signInBtn").onclick=doSignIn;
+  $("pwPass").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();doSignIn()}});
+  $("forgotBtn").onclick=async()=>{
+    const em=$("pwEmail").value.trim().toLowerCase();
+    if(!em){$("gateMsg").textContent="Type your email above first, then click Forgot password.";return}
+    try{await auth.sendPasswordResetEmail(em,{url:location.origin+location.pathname});$("gateMsg").textContent="If "+em+" has an account, a password reset email is on its way. Check your spam folder too."}
+    catch(e){$("gateMsg").textContent=authMsg((e&&e.code)||"unknown")}
   };
-
-  $("signInBtn").onclick=()=>{$("gateMsg").textContent="Waiting for the Google window to finish… If it keeps looping, close it and use the email link below.";auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>{
-    const c=(e&&e.code)||"unknown";
-    const why={
-      "auth/popup-blocked":"Your browser blocked the sign-in window. Allow pop-ups for this site and try again.",
-      "auth/popup-closed-by-user":"The sign-in window was closed before sign-in finished. Try again.",
-      "auth/cancelled-popup-request":"Another sign-in window was already open. Try again.",
-      "auth/operation-not-allowed":"Google sign-in isn't turned on in Firebase. Enable it under Authentication → Sign-in method → Google.",
-      "auth/unauthorized-domain":"This site isn't on Firebase's authorized domains list. Add "+location.hostname+" under Authentication → Settings → Authorized domains.",
-      "auth/network-request-failed":"Couldn't reach Google. Check your connection or turn off ad blockers for this site.",
-      "auth/internal-error":"Google sign-in failed inside the pop-up. Allow third-party cookies for this site, or try another browser."
-    }[c]||"Sign-in didn't finish.";
-    $("gateMsg").textContent=why+" (Error code: "+c+")";
-  })};
+  $("pwChangeBtn").onclick=async()=>{
+    const a=$("pwNew").value, b=$("pwNew2").value;
+    if(a.length<6){$("pwChangeMsg").textContent="Use at least 6 characters.";return}
+    if(a!==b){$("pwChangeMsg").textContent="The two passwords don't match.";return}
+    try{await auth.currentUser.updatePassword(a);$("pwNew").value="";$("pwNew2").value="";$("pwChangeMsg").textContent="Password changed."}
+    catch(e){$("pwChangeMsg").textContent=authMsg((e&&e.code)||"unknown")}
+  };
   $("signOutBtn").onclick=()=>auth.signOut();
   let unsubs=[];
   const onErr=e=>{
