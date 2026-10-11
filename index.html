@@ -132,7 +132,10 @@ tr.dup td{opacity:.55}
     <h1>Expense Tracker</h1>
     <p class="sub" style="margin:0">Sign in with the Google account that was added to the family list.</p>
     <button class="btn primary" id="signInBtn">Sign in with Google</button>
-    <div class="status" id="gateMsg"></div>
+    <div class="sub" style="text-align:center">or get a sign-in link by email</div>
+    <input id="linkEmail" type="email" autocomplete="email" placeholder="Your email address">
+    <button class="btn" id="linkBtn">Email me a sign-in link</button>
+    <div class="status" id="gateMsg" role="status"></div>
   </div>
 </div>
 
@@ -1081,11 +1084,39 @@ let gateNote="";
 const cfg=window.FIREBASE_CONFIG;
 if(!window.firebase||!cfg||!cfg.apiKey||/^PASTE/.test(cfg.apiKey)){
   $("gateMsg").textContent="This copy isn't connected to a database yet. Fill in firebase-config.js as described in README.md.";
-  $("signInBtn").disabled=true;
+  $("signInBtn").disabled=true; $("linkBtn").disabled=true;
 }else{
   firebase.initializeApp(cfg);
   const auth=firebase.auth();
-  $("signInBtn").onclick=()=>{$("gateMsg").textContent="";auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>{
+  // Email-link sign-in (no pop-up needed)
+  const LINK_LS="et-link-email";
+  const linkMode=auth.isSignInWithEmailLink(location.href);
+  const finishLink=async em=>{
+    $("gateMsg").textContent="Signing you in…";
+    try{await auth.signInWithEmailLink(em,location.href);try{localStorage.removeItem(LINK_LS)}catch(e){}history.replaceState(null,"",location.pathname)}
+    catch(e){$("gateMsg").textContent="That sign-in link didn't work. It may have expired or already been used, or the email doesn't match. Request a new link. (Error code: "+((e&&e.code)||"unknown")+")"}
+  };
+  if(linkMode){
+    let em="";try{em=localStorage.getItem(LINK_LS)||""}catch(e){}
+    if(em)finishLink(em);
+    else{$("linkBtn").textContent="Finish sign-in";$("gateMsg").textContent="Type the email address this link was sent to, then click Finish sign-in.";}
+  }
+  $("linkBtn").onclick=async()=>{
+    const em=$("linkEmail").value.trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){$("gateMsg").textContent="Enter your email address first.";return}
+    if(linkMode&&!auth.currentUser)return finishLink(em);
+    $("linkBtn").disabled=true;$("gateMsg").textContent="Sending…";
+    try{
+      await auth.sendSignInLinkToEmail(em,{url:location.origin+location.pathname,handleCodeInApp:true});
+      try{localStorage.setItem(LINK_LS,em)}catch(e){}
+      $("gateMsg").textContent="Sign-in link sent to "+em+". Open it on this device and browser. Check your spam folder if it isn't there in a minute.";
+    }catch(e){
+      const c=(e&&e.code)||"unknown";
+      $("gateMsg").textContent=(c==="auth/operation-not-allowed"?"Email-link sign-in isn't turned on in Firebase yet. Enable it under Authentication → Sign-in method → Email/Password → Email link.":c==="auth/quota-exceeded"?"Too many sign-in emails today. Try again tomorrow.":"Couldn't send the sign-in link.")+" (Error code: "+c+")";
+    }finally{$("linkBtn").disabled=false}
+  };
+
+  $("signInBtn").onclick=()=>{$("gateMsg").textContent="Waiting for the Google window to finish… If it keeps looping, close it and use the email link below.";auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>{
     const c=(e&&e.code)||"unknown";
     const why={
       "auth/popup-blocked":"Your browser blocked the sign-in window. Allow pop-ups for this site and try again.",
