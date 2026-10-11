@@ -22,6 +22,9 @@
   --bg:#0f1513; --surface:#17201d; --fg:#e6ecea; --muted:#94a39d; --line:#2a3632;
   --accent:#4fc0a9; --accent-soft:#1d3a33; --warn:#e3a05c; --bad:#f2847b; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+img{max-width:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
 .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
 .topbar-in{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
