@@ -1,0 +1,21 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14806d"/>
+      <stop offset="1" stop-color="#0b5a4d"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#g)"/>
+  <!-- house: roof + walls, kept inside the central safe zone for round/maskable icons -->
+  <path d="M256 112 L392 228 L364 228 L364 380 Q364 392 352 392 L160 392 Q148 392 148 380 L148 228 L120 228 Z"
+        fill="#ffffff" stroke="#ffffff" stroke-width="18" stroke-linejoin="round"/>
+  <!-- chimney -->
+  <rect x="320" y="132" width="30" height="64" rx="4" fill="#ffffff"/>
+  <!-- peso sign -->
+  <g fill="none" stroke="#0f6b5c" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M226 366 V236 H262 Q300 236 300 270 Q300 304 262 304 H226"/>
+    <path d="M196 256 H318"/>
+    <path d="M196 288 H318"/>
+  </g>
+</svg>
+
