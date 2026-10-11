@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Expense Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky page tabs over a single centered column; each page is a stack of panels */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --fg:#17201d; --muted:#5d6b66; --line:#dbe2df;
+  --accent:#0f6b5c; --accent-soft:#d7ece7; --warn:#b5651d; --bad:#b3261e;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1513; --surface:#17201d; --fg:#e6ecea; --muted:#94a39d; --line:#2a3632;
+  --accent:#4fc0a9; --accent-soft:#1d3a33; --warn:#e3a05c; --bad:#f2847b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1513; --surface:#17201d; --fg:#e6ecea; --muted:#94a39d; --line:#2a3632;
+  --accent:#4fc0a9; --accent-soft:#1d3a33; --warn:#e3a05c; --bad:#f2847b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
+.brand{font-family:var(--display);font-weight:700;font-size:1.25rem;letter-spacing:-.01em}
+nav{display:flex;gap:4px;overflow-x:auto;flex:1 1 auto;min-width:0}
+nav a{color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;white-space:nowrap;font-weight:500;font-size:.92rem}
+nav a:hover{color:var(--fg);background:var(--surface)}
+nav a[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+.page{display:grid;gap:20px}
+.pagehead{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-size:1.8rem;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-family:var(--display);font-size:1.1rem;margin:0 0 12px}
+.sub{color:var(--muted);font-size:.85rem}
+.month{display:flex;align-items:center;gap:6px}
+.month span{font-family:var(--mono);min-width:9ch;text-align:center;font-weight:500}
+button,input,select{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;align-items:end}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.big{font-family:var(--mono);font-size:1.7rem;font-weight:500;font-variant-numeric:tabular-nums}
+.meter{grid-column:1/-1;height:10px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.meter.over i{background:var(--bad)} .meter.near i{background:var(--warn)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+.hbar{display:grid;grid-template-columns:minmax(90px,170px) 1fr auto;gap:10px;align-items:center;font-size:.9rem;padding-block:5px}
+.hbar>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+.swatch{width:30px;height:30px;padding:2px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;flex:none}
+.hbar.click{cursor:pointer;border-radius:6px} .hbar.click:hover{background:var(--bg)}
+.hbar.sel{background:var(--accent-soft)}
+.bar{height:12px;background:var(--bg);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.pct{color:var(--muted);font-size:.8rem;margin-left:6px}
+form.entry{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+form .full{grid-column:1/-1}
+label.f{display:grid;gap:4px;font-size:.8rem;color:var(--muted)}
+input,select{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.vchart{overflow-x:auto}
+.vchart svg{display:block;height:auto}
+.vchart text{font-family:var(--mono);font-size:10px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.date{font-family:var(--mono);color:var(--muted);white-space:nowrap}
+.chip{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.del{border:0;background:none;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:6px}
+.edit{border:0;background:none;color:var(--accent);cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:500}
+.edit:hover{background:var(--accent-soft)}
+tr.editing td{background:var(--accent-soft)}
+#formPanel.editing{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.del:hover{color:var(--bad)} .del.confirm{color:var(--bad);font-weight:600}
+.tablewrap{overflow-x:auto}
+.empty{color:var(--muted);padding:24px 8px;text-align:center}
+.status{font-size:.8rem;color:var(--muted)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.filters input,.filters select{width:auto;flex:1 1 160px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:7px 14px;cursor:pointer;color:var(--muted);font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--bg)}
+.periodbar{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.periodbar label.f{width:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:18px}
+/* import */
+.drop{display:flex;flex-wrap:wrap;gap:12px;align-items:end;border:1px dashed var(--line);border-radius:10px;padding:14px;background:var(--bg)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input[type=file]{flex:1 1 220px;width:auto;background:var(--surface)}
+.reviewbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+table.rev td{padding:6px}
+table.rev select,table.rev input[type=text],table.rev input[type=date]{padding:5px 6px;font-size:.85rem;min-width:110px}
+table.rev input[type=checkbox]{width:auto}
+tr.dup td{opacity:.55}
+.tag{font-size:.7rem;padding:1px 6px;border-radius:99px;background:var(--line);color:var(--muted);margin-left:6px;white-space:nowrap}
+/* categories */
+.guide{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.major{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg);display:grid;gap:10px;align-content:start;min-width:0}
+.major-head{display:flex;align-items:center;gap:8px}
+.major-head input{font-family:var(--display);font-weight:600;font-size:1.05rem;border-color:transparent;background:transparent;padding:4px 6px}
+.major-head input:hover,.major-head input:focus{border-color:var(--line);background:var(--surface)}
+.subs{display:flex;flex-wrap:wrap;gap:6px}
+.sub-chip{display:inline-flex;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding-left:4px;max-width:100%}
+.sub-chip input{border:0;background:transparent;padding:3px 4px 3px 6px;font-size:.82rem;width:auto;min-width:3ch}
+.x{border:0;background:none;color:var(--muted);cursor:pointer;padding:2px 8px;border-radius:99px;font-size:.85rem;line-height:1}
+.x:hover,.x.confirm{color:var(--bad)} .x.confirm{font-weight:600;font-size:.75rem}
+.addrow{display:flex;gap:6px}
+.addrow input{font-size:.82rem;padding:5px 10px;border-style:dashed}
+.addrow .btn{padding:4px 10px}
+.count{font-size:.75rem;color:var(--muted);white-space:nowrap}
+/* backup */
+.steps{display:grid;gap:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.okline{font-size:.85rem}
+.okline a{color:var(--accent)}
+.gate{position:fixed;inset:0;z-index:20;background:var(--bg);display:grid;place-items:center;padding:16px}
+.gate-card{max-width:420px;width:100%;display:grid;gap:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="gate" id="gate">
+  <div class="panel gate-card">
+    <h1>Expense Tracker</h1>
+    <p class="sub" style="margin:0">Sign in with the Google account that was added to the family list.</p>
+    <button class="btn primary" id="signInBtn">Sign in with Google</button>
+    <div class="status" id="gateMsg"></div>
+  </div>
+</div>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="brand">Expense Tracker</div>
+  <nav aria-label="Pages">
+    <a href="#ledger" data-page="ledger">Ledger</a>
+    <a href="#dashboard" data-page="dashboard">Dashboard</a>
+    <a href="#import" data-page="import">Import</a>
+    <a href="#categories" data-page="categories">Categories</a>
+    <a href="#backup" data-page="backup">Backup</a>
+  </nav>
+  <div class="status" id="status">Connecting…</div>
+</div></div>
+
+<div class="wrap">
+
+<!-- ============ PAGE 1: LEDGER ============ -->
+<section class="page" id="page-ledger">
+  <div class="pagehead">
+    <h1>Ledger</h1>
+    <div class="month">
+      <button class="btn" id="prev" aria-label="Previous month">‹</button>
+      <span id="monthLabel"></span>
+      <button class="btn" id="next" aria-label="Next month">›</button>
+    </div>
+  </div>
+
+  <div class="panel summary">
+    <div><div class="label">Spent this month</div><div class="big" id="spent">₱0.00</div></div>
+    <div><div class="label">Left in budget</div><div class="big" id="left">—</div></div>
+    <div><div class="label">Daily average</div><div class="big" id="avg">₱0.00</div></div>
+    <label class="f">Monthly budget
+      <input id="budget" type="number" min="0" step="100" inputmode="decimal" placeholder="e.g. 30000">
+    </label>
+    <div class="meter" id="meter"><i style="width:0"></i></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel" id="formPanel">
+      <h2 id="formTitle">Add an expense</h2>
+      <form class="entry" id="form">
+        <label class="f">Amount (use − for a refund)<input id="amount" type="number" step="0.01" inputmode="decimal" required placeholder="0.00"></label>
+        <label class="f">Date<input id="date" type="date" required></label>
+        <label class="f">Category<select id="category"></select></label>
+        <label class="f">Subcategory<select id="subcategory"></select></label>
+        <label class="f">Paid with<select id="method"><option>Card</option><option>Cash</option><option>Bank transfer</option><option>E-wallet</option><option>Other</option></select></label>
+        <label class="f" id="bankWrap">Card bank<select id="bank"></select></label>
+        <label class="f full">Note<input id="note" type="text" maxlength="120" placeholder="Groceries at the market"></label>
+        <button class="btn primary full" type="submit" id="submitBtn">Add expense</button>
+        <button class="btn full" type="button" id="cancelEdit" hidden>Cancel editing</button>
+      </form>
+      <div class="status" id="formMsg" style="margin-top:8px"></div>
+    </div>
+    <div class="panel">
+      <h2>This month by category</h2>
+      <div id="monthCats"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Recent expenses</h2>
+    <p class="sub" style="margin:-8px 0 8px">Your 5 most recent entries across all months.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Date</th><th>Note</th><th>Category</th><th>Paid with</th><th class="num">Amount</th><th></th></tr></thead>
+      <tbody id="recentRows"></tbody>
+    </table></div>
+  </div>
+
+  <div class="panel">
+    <h2>Find and edit entries</h2>
+    <div class="filters">
+      <select id="scope" aria-label="Which entries"><option value="month">Month shown above</option><option value="pick">Choose month and year</option><option value="all">All months</option></select>
+      <input id="scopeMonth" type="month" aria-label="Month and year" hidden>
+      <select id="bankFilter" aria-label="Card bank"><option value="">All cards and payment methods</option></select>
+      <input id="search" type="search" placeholder="Search notes">
+      <select id="catFilter"><option value="">All categories</option></select>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Date</th><th>Note</th><th>Category</th><th>Paid with</th><th class="num">Amount</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ============ PAGE 2: DASHBOARD ============ -->
+<section class="page" id="page-dashboard" hidden>
+  <div class="pagehead"><h1>Dashboard</h1></div>
+  <div class="panel periodbar">
+    <div class="seg" role="group" aria-label="Period">
+      <button data-mode="lifetime">Lifetime</button>
+      <button data-mode="year">Year</button>
+      <button data-mode="month">Month</button>
+      <button data-mode="range">Date range</button>
+    </div>
+    <label class="f" data-for="year" hidden>Year<select id="pYear"></select></label>
+    <label class="f" data-for="month" hidden>Month<input id="pMonth" type="month"></label>
+    <label class="f" data-for="range" hidden>From<input id="pFrom" type="date"></label>
+    <label class="f" data-for="range" hidden>To<input id="pTo" type="date"></label>
+  </div>
+
+  <div class="panel kpis">
+    <div><div class="label">Total spent</div><div class="big" id="dTotal">₱0.00</div></div>
+    <div><div class="label">Entries</div><div class="big" id="dCount">0</div></div>
+    <div><div class="label" id="dAvgLabel">Average per month</div><div class="big" id="dAvg">₱0.00</div></div>
+    <div><div class="label">Top category</div><div class="big" id="dTop" style="font-size:1.2rem;font-family:var(--display)">—</div></div>
+  </div>
+
+  <div class="panel">
+    <h2 id="dTimeTitle">Spending over time</h2>
+    <div class="vchart" id="dTime"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>By category</h2>
+      <p class="sub" style="margin:-8px 0 8px">Select a category to see its subcategories.</p>
+      <div id="dCats"></div>
+    </div>
+    <div class="panel">
+      <h2 id="dSubTitle">Subcategories</h2>
+      <div id="dSubs"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGE 3: IMPORT ============ -->
+<section class="page" id="page-import" hidden>
+  <div class="pagehead"><h1>Import a statement</h1></div>
+  <div class="panel">
+    <p class="sub" style="margin:0 0 12px">Upload a credit card statement as a PDF, CSV, or a photo or screenshot. Claude reads the charges and suggests a category for each. You review them before anything is saved.</p>
+    <div class="drop" id="drop">
+      <input id="file" type="file" accept=".pdf,.csv,.txt,image/*">
+      <label class="f" style="max-width:260px">PDF password, if your statement has one
+        <input id="pdfpw" type="password" autocomplete="off" placeholder="Leave blank if none">
+      </label>
+      <button class="btn primary" id="readBtn" disabled>Read statement</button>
+      <button class="btn" id="stopBtn" hidden>Stop</button>
+    </div>
+    <div class="status" id="importMsg" style="margin-top:8px"></div>
+  </div>
+  <div class="panel" id="review" hidden>
+    <div class="reviewbar">
+      <h2 style="margin:0">Review</h2>
+      <span id="reviewSum" class="sub"></span>
+      <span style="flex:1"></span>
+      <label class="f" style="width:auto">Card bank<select id="revBank"></select></label>
+      <button class="btn" id="discardBtn">Discard</button>
+      <button class="btn primary" id="importBtn">Import selected</button>
+    </div>
+    <div class="tablewrap"><table class="rev">
+      <thead><tr><th><input type="checkbox" id="allChk" aria-label="Select all" checked></th><th>Date</th><th>Description</th><th>Category</th><th>Subcategory</th><th class="num">Amount</th></tr></thead>
+      <tbody id="revRows"></tbody>
+    </table></div>
+  </div>
+  <div class="panel" id="dupPanel">
+    <div class="reviewbar"><h2 style="margin:0">Possible double entries</h2><span class="sub" id="dupSum"></span></div>
+    <p class="sub" style="margin:0 0 10px">Pairs with the same amount within 3 days of each other, where one was typed in by hand and the other came from a statement, or two entries are identical. Choose which one to keep, or mark the pair as not a duplicate.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Typed in</th><th>From statement</th><th class="num">Amount</th><th>Action</th></tr></thead>
+      <tbody id="dupRows"></tbody>
+    </table></div>
+    <div class="status" id="dupMsg" style="margin-top:8px"></div>
+  </div>
+</section>
+
+<!-- ============ PAGE 4: CATEGORIES ============ -->
+<section class="page" id="page-categories" hidden>
+  <div class="pagehead"><h1>Categories</h1></div>
+  <div class="panel">
+    <p class="sub" style="margin:0 0 12px">Rename a category or subcategory by editing its name. Renames update your past entries too. Deleting a category keeps past entries under their old name.</p>
+    <div class="guide" id="guide"></div>
+    <div class="addrow" style="margin-top:12px;max-width:420px">
+      <input id="newMajor" type="text" maxlength="40" placeholder="Add major category">
+      <button class="btn primary" id="addMajor" aria-label="Add major category">+</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGE 5: BACKUP ============ -->
+<section class="page" id="page-backup" hidden>
+  <div class="pagehead"><h1>Backup</h1></div>
+  <div class="panel steps">
+    <div>
+      <h2>Account</h2>
+      <div class="row"><span>Signed in as <b id="who"></b></span><button class="btn" id="signOutBtn">Sign out</button></div>
+    </div>
+    <div>
+      <h2>Statement reading (optional)</h2>
+      <p class="sub" style="margin:-6px 0 10px">The Import page uses Claude to read statements. Paste an Anthropic API key from console.anthropic.com to turn it on. The key is saved only in this browser, and each statement read is billed to that key (usually a few pesos).</p>
+      <div class="row">
+        <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-â€¦" style="max-width:360px">
+        <button class="btn primary" id="saveKey">Save key</button>
+        <button class="btn" id="clearKey">Remove key</button>
+      </div>
+      <div class="status" id="keyMsg" style="margin-top:8px"></div>
+      <div hidden><button id="driveBtn"></button><span id="driveMsg"></span><div id="lastBackup"></div><button id="csvDriveBtn"></button></div>
+    </div>
+  </div>
+  <div class="panel steps">
+    <div>
+      <h2>Back up to this device</h2>
+      <p class="sub" style="margin:-6px 0 10px">Downloads everything (expenses, categories, budget) as one file. Keep it somewhere safe, such as Google Drive.</p>
+      <div class="row"><button class="btn" id="dlBtn">Download backup file</button><span class="status" id="dlMsg"></span></div>
+    </div>
+    <div>
+      <h2>Export to a spreadsheet (CSV)</h2>
+      <p class="sub" style="margin:-6px 0 10px">One row per expense with date, category, subcategory, note, payment method, amount and source. Opens in Excel or Google Sheets. CSV files can't be restored; use the backup file for that.</p>
+      <div class="row">
+        <label class="f" style="width:auto">From<input id="csvFrom" type="date"></label>
+        <label class="f" style="width:auto">To<input id="csvTo" type="date"></label>
+        <button class="btn" id="csvBtn">Download CSV</button>
+      </div>
+      <div class="status" id="csvMsg" style="margin-top:8px">Leave the dates blank to export everything.</div>
+    </div>
+    <div>
+      <h2>Restore from a backup file</h2>
+      <p class="sub" style="margin:-6px 0 10px">Choose an Expense Tracker backup file, including one downloaded from the claude.ai version. Entries already in your ledger are skipped, so nothing is duplicated. Categories and budget are replaced by the backup's.</p>
+      <div class="row">
+        <input id="restoreFile" type="file" accept=".json,application/json" style="max-width:320px">
+        <button class="btn" id="restoreBtn" disabled>Restore</button>
+      </div>
+      <div class="status" id="restoreMsg" style="margin-top:8px"></div>
+    </div>
+  </div>
+  <p class="sub" id="dataCount"></p>
+</section>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script>
+const DEFAULT_CATS=[
+  {name:"Education",subs:["Extracurricular Activities","School Supplies","Tuition","Tutoring","Uniforms"]},
+  {name:"Family & Care",subs:["Allowances","Domestic Help","Kids","Personal Care","Pet Care"]},
+  {name:"Food",subs:["Dining Out","Food Delivery"]},
+  {name:"Groceries",subs:["Food","Household Supplies"]},
+  {name:"Health",subs:["Dental Expense","Doctor's Fee","Gym Membership","Lab Expense","Medicine & Supplements"]},
+  {name:"Housing",subs:["HOA Dues","House Repair, Maintenance & Renovation","Mortgage & Loan Payments","Rent"]},
+  {name:"Insurance & Contributions",subs:["Government Contributions","Life Insurance","Medical Insurance","Memorial"]},
+  {name:"Lifestyle & Leisure",subs:["AI Subscription","Recreation and Entertainment","Vacation"]},
+  {name:"Other",subs:["Other"]},
+  {name:"Shopping & Household",subs:["Clothing","Furniture & Appliances","Online Shopping","Toys"]},
+  {name:"Transportation",subs:["Fuel","Parking","Registration","Tolls","Vehicle Insurance","Vehicle Maintenance"]},
+  {name:"Utilities",subs:["Cellphone","Electricity","Internet","LPG","Water"]}
+];
+// Distinct category colors, mid-tone so they read on light and dark backgrounds
+const PALETTE=["#2a7fba","#d1495b","#e0a030","#00897b","#8e5ba6","#5fa36a","#e07a3f","#c2549a","#5b63c7","#9c7a3c","#3fa7c0","#8a9a2e","#b5523b","#4f6d7a","#d4789c","#6b8f71"];
+function colorFor(name){
+  const i=cats.findIndex(c=>c.name===name);
+  if(i<0)return "#8a958f";
+  return cats[i].color||PALETTE[i%PALETTE.length];
+}
+function freeColor(){const used=new Set(cats.map((c,i)=>c.color||PALETTE[i%PALETTE.length]));return PALETTE.find(p=>!used.has(p))||PALETTE[cats.length%PALETTE.length]}
+const BANKS=["BDO","BPI","HSBC","Metrobank","Security Bank","RCBC","UnionBank","EastWest","PNB","China Bank","AUB","Maybank","Standard Chartered","Robinsons Bank","PSBank","Landbank","Maya","GCash (GCredit)","GoTyme","CIMB","Other"];
+function bankOptions(sel,blank){sel.innerHTML="";sel.add(new Option(blank,""));BANKS.forEach(b=>sel.add(new Option(b)))}
+// Match a bank name Claude reads off a statement to the list above
+function matchBank(s){
+  s=String(s||"").toLowerCase(); if(!s)return "";
+  const alias={"banco de oro":"BDO","bank of the philippine islands":"BPI","metropolitan bank":"Metrobank","rizal commercial":"RCBC","union bank":"UnionBank","citibank":"UnionBank","citi":"UnionBank","east west":"EastWest","philippine national bank":"PNB","chinabank":"China Bank","asia united":"AUB","land bank":"Landbank","philippine savings":"PSBank"};
+  for(const k in alias)if(s.includes(k))return alias[k];
+  return BANKS.find(b=>s.includes(b.toLowerCase().split(" (")[0]))||"Other";
+}
+const fmt=new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP"});
+const fmtC=new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP",notation:"compact",maximumFractionDigits:1});
+const $=id=>document.getElementById(id);
+let expenses=[], budget=0, db=null, sample=null, mcp=null, downloads=null;
+let cursor=new Date(), confirmId=null, confirmCat=null, lastBackup=null;
+let cats=JSON.parse(JSON.stringify(DEFAULT_CATS));
+cursor.setDate(1);
+const ym=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+const iso=d=>ym(d)+"-"+String(d.getDate()).padStart(2,"0");
+const today=()=>iso(new Date());
+const focusedIn=sel=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest(sel))};
+$("date").value=today();
+
+// ---------- Local fallback ----------
+const LS="pocket-ledger";
+function loadLocal(){try{const s=JSON.parse(localStorage.getItem(LS)||"{}");expenses=s.expenses||[];budget=s.budget||0;if(s.cats)cats=s.cats}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify({expenses,budget,cats}))}catch(e){}}
+
+// ---------- Page routing ----------
+const PAGES=["ledger","dashboard","import","categories","backup"];
+function route(){
+  const p=PAGES.includes(location.hash.slice(1))?location.hash.slice(1):"ledger";
+  PAGES.forEach(x=>$("page-"+x).hidden=x!==p);
+  document.querySelectorAll("nav a").forEach(a=>a.toggleAttribute("aria-current",a.dataset.page===p)||a.dataset.page===p&&a.setAttribute("aria-current","page"));
+  if(p==="dashboard")renderDash();
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange",route);
+document.querySelectorAll("nav a").forEach(a=>a.addEventListener("click",e=>{
+  // Some viewers don't update the hash; switch pages directly as well
+  e.preventDefault(); try{history.replaceState(null,"","#"+a.dataset.page)}catch(_){}
+  showPage(a.dataset.page);
+}));
+function showPage(p){
+  PAGES.forEach(x=>$("page-"+x).hidden=x!==p);
+  document.querySelectorAll("nav a").forEach(a=>{if(a.dataset.page===p)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
+  if(p==="dashboard")renderDash();
+  window.scrollTo(0,0);
+}
+
+// ---------- Categories (selects) ----------
+function fillSelects(){
+  if(typeof editingId!=="undefined"&&editingId)return; // don't reset the form mid-edit
+  const cSel=$("category"), prev=cSel.value, fSel=$("catFilter"), fPrev=fSel.value;
+  cSel.innerHTML=""; fSel.innerHTML='<option value="">All categories</option>';
+  cats.forEach(c=>{cSel.add(new Option(c.name));fSel.add(new Option(c.name))});
+  if(cats.some(c=>c.name===prev))cSel.value=prev;
+  if(cats.some(c=>c.name===fPrev))fSel.value=fPrev;
+  fillSubs();
+}
+function fillSubs(){
+  const s=$("subcategory"), prev=s.value, c=cats.find(c=>c.name===$("category").value);
+  s.innerHTML=""; (c?c.subs:[]).forEach(x=>s.add(new Option(x)));
+  if(!s.options.length)s.add(new Option("—",""));
+  if(c&&c.subs.includes(prev))s.value=prev;
+}
+$("category").onchange=fillSubs;
+bankOptions($("bank"),"Choose bank");
+BANKS.forEach(b=>$("bankFilter").add(new Option(b)));
+const syncBank=()=>{$("bankWrap").hidden=!/^Card/.test($("method").value)};
+$("method").addEventListener("change",syncBank); syncBank();
+
+// ---------- Ledger page ----------
+function entryRow(e){
+  const tr=document.createElement("tr"); if(editingId===e.id)tr.className="editing";
+  tr.innerHTML=`<td class="date"></td><td></td><td><span class="chip"></span></td><td></td><td class="num">${fmt.format(e.amount)}</td><td style="white-space:nowrap"><button class="edit">Edit</button><button class="del${confirmId===e.id?" confirm":""}">${confirmId===e.id?"Confirm":"Delete"}</button></td>`;
+  tr.querySelector(".edit").onclick=()=>startEdit(e);
+  tr.children[0].textContent=e.date;
+  tr.children[1].textContent=e.note||"—";
+  tr.children[2].firstChild.textContent=e.category+(e.subcategory?" · "+e.subcategory:"");
+  {const d=document.createElement("i");d.className="dot";d.style.background=colorFor(e.category);d.style.marginRight="5px";tr.children[2].firstChild.prepend(d)}
+  tr.children[3].textContent=(e.method||"")+(e.card?" · "+e.card:"");
+  tr.querySelector(".del").onclick=()=>remove(e.id);
+  return tr;
+}
+const byNewest=(a,b)=>b.date.localeCompare(a.date)||(b.created||0)-(a.created||0);
+
+function hbars(el,pairs,opts={}){
+  el.innerHTML="";
+  if(!pairs.length){el.innerHTML=`<div class="empty">${opts.empty||"No spending in this period."}</div>`;return}
+  const max=Math.max(...pairs.map(p=>p[1]),1), tot=pairs.reduce((s,p)=>s+Math.max(p[1],0),0)||1;
+  pairs.forEach(([name,v])=>{
+    const row=document.createElement("div"); row.className="hbar"+(opts.onPick?" click":"")+(opts.selected===name?" sel":"");
+    const col=opts.color?opts.color(name):"var(--accent)";
+    row.innerHTML=`<span></span><div class="bar"><i style="width:${v>0?Math.max(1,v/max*100):0}%;background:${col}"></i></div><span class="num">${fmt.format(v)}<span class="pct">${v>0?Math.round(v/tot*100)+"%":"refund"}</span></span>`;
+    row.firstChild.textContent=name; row.firstChild.title=name;
+    if(opts.color&&!opts.noDot){const d=document.createElement("i");d.className="dot";d.style.background=col;row.firstChild.prepend(d)}
+    if(opts.onPick){row.tabIndex=0;row.setAttribute("role","button");row.onclick=()=>opts.onPick(name);row.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();opts.onPick(name)}}}
+    el.appendChild(row);
+  });
+}
+function groupBy(list,key){const m={};list.forEach(e=>{const k=e[key]||"Uncategorized";m[k]=(m[k]||0)+e.amount});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+
+function render(){
+  const key=ym(cursor);
+  $("monthLabel").textContent=cursor.toLocaleDateString(undefined,{month:"short",year:"numeric"});
+  const month=expenses.filter(e=>e.date&&e.date.startsWith(key));
+  const total=month.reduce((s,e)=>s+e.amount,0);
+  $("spent").textContent=fmt.format(total);
+  const now=new Date(), isCur=key===ym(now);
+  const days=isCur?now.getDate():new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate();
+  $("avg").textContent=fmt.format(month.length?total/days:0);
+  if(document.activeElement!==$("budget")) $("budget").value=budget||"";
+  const m=$("meter"); m.className="meter";
+  if(budget>0){
+    const left=budget-total, pct=Math.min(100,total/budget*100);
+    $("left").textContent=fmt.format(left);
+    $("left").style.color=left<0?"var(--bad)":"";
+    m.firstElementChild.style.width=pct+"%";
+    if(left<0)m.classList.add("over");else if(pct>85)m.classList.add("near");
+  }else{$("left").textContent="Set a budget";$("left").style.color="var(--muted)";m.firstElementChild.style.width="0"}
+
+  hbars($("monthCats"),groupBy(month,"category"),{empty:"No spending recorded for this month yet.",color:colorFor});
+
+  const rb=$("recentRows"); rb.innerHTML="";
+  const recent=[...expenses].sort(byNewest).slice(0,5);
+  if(!recent.length)rb.innerHTML='<tr><td colspan="6" class="empty">Add your first expense with the form above.</td></tr>';
+  recent.forEach(e=>rb.appendChild(entryRow(e)));
+
+  const q=$("search").value.toLowerCase(), cf=$("catFilter").value;
+  const sc=$("scope").value, pm=$("scopeMonth").value, bf=$("bankFilter").value;
+  $("scopeMonth").hidden=sc!=="pick";
+  const base=sc==="all"?expenses:sc==="pick"?(pm?expenses.filter(e=>e.date&&e.date.startsWith(pm)):expenses):month;
+  const list=base.filter(e=>(!bf||e.card===bf)&&(!cf||e.category===cf)&&(!q||(e.note||"").toLowerCase().includes(q))).sort(byNewest);
+  const tb=$("rows"); tb.innerHTML="";
+  if(!list.length)tb.innerHTML=`<tr><td colspan="6" class="empty">${(q||cf||bf||sc==="pick")?"No entries match your filter.":"No entries yet."}</td></tr>`;
+  list.forEach(e=>tb.appendChild(entryRow(e)));
+
+  $("dataCount").textContent=`Your ledger has ${expenses.length} entr${expenses.length===1?"y":"ies"} and ${cats.length} categories.`;
+  if(!$("page-dashboard").hidden)renderDash();
+  if(typeof renderDups==="function")renderDups();
+}
+
+async function remove(id){
+  if(confirmId!==id){confirmId=id;render();setTimeout(()=>{if(confirmId===id){confirmId=null;render()}},4000);return}
+  confirmId=null;
+  if(editingId===id)endEdit("");
+  if(db){try{await db.collection("expenses").doc(id).delete()}catch(e){$("status").textContent="Couldn't delete that entry. Try again."}}
+  else{expenses=expenses.filter(e=>e.id!==id);saveLocal();render()}
+}
+
+let editingId=null;
+function startEdit(e){
+  editingId=e.id;
+  $("amount").value=e.amount; $("date").value=e.date; $("note").value=e.note||"";
+  if(![...$("category").options].some(o=>o.value===e.category))$("category").add(new Option(e.category));
+  $("category").value=e.category; fillSubs();
+  if(e.subcategory&&![...$("subcategory").options].some(o=>o.value===e.subcategory))$("subcategory").add(new Option(e.subcategory));
+  $("subcategory").value=e.subcategory||$("subcategory").value;
+  if(e.method&&![...$("method").options].some(o=>o.value===e.method))$("method").add(new Option(e.method));
+  $("method").value=e.method||"Card";
+  if(e.card&&!BANKS.includes(e.card))$("bank").add(new Option(e.card));
+  $("bank").value=e.card||""; syncBank();
+  $("formTitle").textContent="Edit expense"; $("submitBtn").textContent="Save changes"; $("cancelEdit").hidden=false;
+  $("formPanel").classList.add("editing"); $("formMsg").textContent="Editing the "+e.date+" entry for "+fmt.format(e.amount)+".";
+  render(); $("formPanel").scrollIntoView({behavior:"smooth",block:"start"}); $("amount").focus({preventScroll:true});
+}
+function endEdit(msg){
+  editingId=null; $("formTitle").textContent="Add an expense"; $("submitBtn").textContent="Add expense"; $("cancelEdit").hidden=true;
+  $("formPanel").classList.remove("editing"); $("amount").value=""; $("note").value=""; $("date").value=today(); syncBank();
+  fillSelects(); $("formMsg").textContent=msg||""; render();
+}
+$("cancelEdit").onclick=()=>endEdit("Edit cancelled.");
+
+$("form").addEventListener("submit",async ev=>{
+  ev.preventDefault();
+  const amount=Math.round(parseFloat($("amount").value)*100)/100;
+  if(!isFinite(amount)||amount===0){$("formMsg").textContent="Enter an amount. Use a minus sign for a refund, e.g. -500.";return}
+  if(editingId){
+    const patch={amount,date:$("date").value,category:$("category").value,subcategory:$("subcategory").value,method:$("method").value,card:/^Card/.test($("method").value)?$("bank").value:"",note:$("note").value.trim(),edited:Date.now()};
+    const id=editingId;
+    if(db){try{await db.collection("expenses").doc(id).update(patch)}catch(err){$("formMsg").textContent="Couldn't save your changes. Check your connection and try again.";return}}
+    else{const e=expenses.find(x=>x.id===id);if(e)Object.assign(e,patch);saveLocal()}
+    endEdit("Changes saved.");
+    const d=new Date(patch.date+"T00:00");if(ym(d)!==ym(cursor)&&$("scope").value==="month"){cursor=new Date(d.getFullYear(),d.getMonth(),1);render()}
+    return;
+  }
+  const e={amount,date:$("date").value,category:$("category").value,subcategory:$("subcategory").value,method:$("method").value,card:/^Card/.test($("method").value)?$("bank").value:"",note:$("note").value.trim(),created:Date.now()};
+  $("formMsg").textContent="";
+  if(db){
+    try{await db.collection("expenses").add(e);$("formMsg").textContent="Added "+fmt.format(amount)+"."}
+    catch(err){$("formMsg").textContent=err.code==="quota_exceeded"?"Storage is full. Delete old entries to add more.":"Couldn't save. Check your connection and try again.";return}
+  }else{e.id="l"+e.created;expenses.push(e);saveLocal();render();$("formMsg").textContent="Added "+fmt.format(amount)+"."}
+  $("amount").value="";$("note").value="";$("amount").focus();
+  const d=new Date(e.date+"T00:00");if(ym(d)!==ym(cursor)){cursor=new Date(d.getFullYear(),d.getMonth(),1);render()}
+});
+let bt;
+$("budget").addEventListener("input",()=>{clearTimeout(bt);bt=setTimeout(async()=>{
+  const v=Math.max(0,parseFloat($("budget").value)||0); if(v===budget)return; budget=v;render();
+  if(db){try{await db.doc("settings/budget").set({monthly:v})}catch(e){}}else saveLocal();
+},600)});
+$("prev").onclick=()=>{cursor.setMonth(cursor.getMonth()-1);render()};
+$("next").onclick=()=>{cursor.setMonth(cursor.getMonth()+1);render()};
+$("search").oninput=render; $("catFilter").onchange=render; $("bankFilter").onchange=render;
+$("scope").onchange=()=>{if($("scope").value==="pick"&&!$("scopeMonth").value)$("scopeMonth").value=ym(cursor);render()};
+$("scopeMonth").onchange=render;
+
+// ---------- Dashboard page ----------
+let pMode="month", pickedCat=null;
+$("pMonth").value=ym(new Date());
+$("pTo").value=today();
+{const d=new Date();d.setDate(d.getDate()-29);$("pFrom").value=iso(d)}
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{pMode=b.dataset.mode;pickedCat=null;renderDash()});
+["pYear","pMonth","pFrom","pTo"].forEach(id=>$(id).addEventListener("change",()=>{pickedCat=null;renderDash()}));
+
+function periodBounds(){
+  const dates=expenses.map(e=>e.date).filter(Boolean).sort();
+  const first=dates[0]||today(), last=dates[dates.length-1]||today();
+  if(pMode==="year"){const y=$("pYear").value||String(new Date().getFullYear());return[y+"-01-01",y+"-12-31",y]}
+  if(pMode==="month"){const m=$("pMonth").value||ym(new Date());const [y,mm]=m.split("-").map(Number);return[m+"-01",iso(new Date(y,mm,0)),new Date(y,mm-1,1).toLocaleDateString(undefined,{month:"long",year:"numeric"})]}
+  if(pMode==="range"){let a=$("pFrom").value||first,b=$("pTo").value||last;if(a>b)[a,b]=[b,a];return[a,b,a+" to "+b]}
+  return[first,last<today()?today():last,"all time"];
+}
+function renderDash(){
+  // controls
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===pMode));
+  document.querySelectorAll(".periodbar [data-for]").forEach(l=>l.hidden=l.dataset.for!==pMode);
+  const years=[...new Set(expenses.map(e=>e.date&&e.date.slice(0,4)).filter(Boolean).concat(String(new Date().getFullYear())))].sort().reverse();
+  const ys=$("pYear"), yPrev=ys.value; ys.innerHTML=""; years.forEach(y=>ys.add(new Option(y))); ys.value=years.includes(yPrev)?yPrev:years[0];
+
+  const [from,to,label]=periodBounds();
+  const list=expenses.filter(e=>e.date>=from&&e.date<=to);
+  const total=list.reduce((s,e)=>s+e.amount,0);
+  $("dTotal").textContent=fmt.format(total);
+  $("dCount").textContent=list.length;
+
+  // time buckets: daily for ≤62 days, monthly for ≤36 months, else yearly
+  const dFrom=new Date(from+"T00:00"), dTo=new Date(to+"T00:00");
+  const spanDays=Math.round((dTo-dFrom)/864e5)+1;
+  const months=(dTo.getFullYear()-dFrom.getFullYear())*12+dTo.getMonth()-dFrom.getMonth()+1;
+  let unit=spanDays<=62?"day":months<=36?"month":"year";
+  const buckets=[];
+  if(unit==="day"){for(let d=new Date(dFrom);d<=dTo;d.setDate(d.getDate()+1))buckets.push({k:iso(d),lab:String(d.getDate()),full:d.toLocaleDateString(undefined,{month:"short",day:"numeric"})})}
+  else if(unit==="month"){for(let d=new Date(dFrom.getFullYear(),dFrom.getMonth(),1);d<=dTo;d.setMonth(d.getMonth()+1))buckets.push({k:ym(d),lab:d.toLocaleDateString(undefined,{month:"short"})+(months>12?" "+String(d.getFullYear()).slice(2):""),full:d.toLocaleDateString(undefined,{month:"long",year:"numeric"})})}
+  else{for(let y=dFrom.getFullYear();y<=dTo.getFullYear();y++)buckets.push({k:String(y),lab:String(y),full:String(y)})}
+  const kl=unit==="day"?10:unit==="month"?7:4;
+  const sums={}; list.forEach(e=>{const k=e.date.slice(0,kl);sums[k]=(sums[k]||0)+e.amount});
+  buckets.forEach(b=>b.v=sums[b.k]||0);
+  $("dAvgLabel").textContent="Average per "+unit;
+  $("dAvg").textContent=fmt.format(buckets.length?total/buckets.length:0);
+  $("dTimeTitle").textContent=`Spending by ${unit}, ${label}`;
+  drawVBars($("dTime"),buckets);
+
+  const catPairs=groupBy(list,"category");
+  $("dTop").textContent=catPairs[0]?catPairs[0][0]:"—";
+  if(pickedCat&&!catPairs.some(p=>p[0]===pickedCat))pickedCat=null;
+  if(!pickedCat&&catPairs[0])pickedCat=catPairs[0][0];
+  hbars($("dCats"),catPairs,{selected:pickedCat,onPick:n=>{pickedCat=n;renderDash()},color:colorFor});
+  $("dSubTitle").textContent=pickedCat?pickedCat+" subcategories":"Subcategories";
+  hbars($("dSubs"),groupBy(list.filter(e=>e.category===pickedCat),"subcategory"),{empty:"Pick a category to see its subcategories.",color:()=>colorFor(pickedCat),noDot:true});
+}
+function drawVBars(el,buckets){
+  if(!buckets.some(b=>b.v)){el.innerHTML='<div class="empty">No spending in this period.</div>';return}
+  const n=buckets.length, slot=Math.max(34,Math.min(80,900/n)), padL=8, top=24, H=220, base=top+H;
+  const W=padL*2+n*slot, max=Math.max(...buckets.map(b=>b.v),1);
+  const rot=n>16;
+  let s=`<svg viewBox="0 0 ${W} ${base+(rot?44:24)}" width="${W}" style="min-width:${Math.min(W,320)}px;max-width:${Math.max(W,100)}px;width:100%" role="img" aria-label="Spending totals by period">`;
+  [0.25,0.5,0.75,1].forEach(f=>s+=`<line x1="${padL}" x2="${W-padL}" y1="${base-f*H}" y2="${base-f*H}" stroke="var(--line)" stroke-dasharray="2 4"/>`);
+  s+=`<line x1="${padL}" x2="${W-padL}" y1="${base}" y2="${base}" stroke="var(--muted)"/>`;
+  buckets.forEach((b,i)=>{
+    const h=Math.max(0,b.v)/max*H, x=padL+i*slot+slot*.15, w=slot*.7, cx=x+w/2;
+    s+=`<rect x="${x}" y="${base-h}" width="${w}" height="${Math.max(h,b.v?1:0)}" rx="3" fill="var(--accent)"><title>${b.full}: ${fmt.format(b.v)}</title></rect>`;
+    if(b.v){
+      if(rot)s+=`<text x="${cx}" y="${base-h-4}" fill="var(--fg)" font-size="9" text-anchor="start" transform="rotate(-60 ${cx} ${base-h-4})">${fmtC.format(b.v)}</text>`;
+      else s+=`<text x="${cx}" y="${base-h-6}" fill="var(--fg)" text-anchor="middle">${fmtC.format(b.v)}</text>`;
+    }
+    s+=`<text x="${cx}" y="${base+14}" fill="var(--muted)" text-anchor="middle">${b.lab}</text>`;
+  });
+  el.innerHTML=s+"</svg>";
+}
+
+// ---------- Categories page ----------
+async function saveCats(){
+  fillSelects(); renderGuide(); render();
+  if(db){try{await db.doc("settings/categories").set({list:cats})}catch(e){$("status").textContent="Couldn't save category changes. Try again."}}
+  else saveLocal();
+}
+async function renameInEntries(match,patch){
+  const hits=expenses.filter(match);
+  if(db){for(const e of hits){try{await db.collection("expenses").doc(e.id).update(patch(e))}catch(err){}}}
+  else{hits.forEach(e=>Object.assign(e,patch(e)));saveLocal();render()}
+}
+const clean=v=>v.replace(/\s+/g," ").trim().slice(0,60);
+function renderGuide(){
+  const g=$("guide"); g.innerHTML="";
+  cats.forEach((c,ci)=>{
+    const used=expenses.filter(e=>e.category===c.name).length;
+    const box=document.createElement("div"); box.className="major";
+    const head=document.createElement("div"); head.className="major-head";
+    const nm=document.createElement("input"); nm.id="maj-"+ci; nm.value=c.name; nm.setAttribute("aria-label","Category name");
+    nm.onchange=async()=>{
+      const v=clean(nm.value), old=c.name;
+      if(!v||cats.some((o,i)=>i!==ci&&o.name.toLowerCase()===v.toLowerCase())){nm.value=old;return}
+      c.name=v; await saveCats(); await renameInEntries(e=>e.category===old,()=>({category:v}));
+    };
+    const cnt=document.createElement("span"); cnt.className="count"; cnt.textContent=used?used+" entr"+(used===1?"y":"ies"):"";
+    const key="m"+ci, del=document.createElement("button");
+    del.className="x"+(confirmCat===key?" confirm":""); del.textContent=confirmCat===key?"Delete?":"×";
+    del.setAttribute("aria-label","Delete "+c.name);
+    del.onclick=()=>armOrDo(key,()=>{cats.forEach((o,i)=>{if(!o.color)o.color=PALETTE[i%PALETTE.length]});cats.splice(ci,1);saveCats()});
+    const sw=document.createElement("input"); sw.type="color"; sw.className="swatch"; sw.id="col-"+ci; sw.value=colorFor(c.name);
+    sw.setAttribute("aria-label","Color for "+c.name); sw.title="Change color";
+    sw.onchange=()=>{
+      const v=sw.value.toLowerCase();
+      if(cats.some((o,i)=>i!==ci&&colorFor(o.name).toLowerCase()===v)){sw.value=colorFor(c.name);$("status").textContent="Another category already uses that color. Pick a different one.";return}
+      c.color=v; saveCats();
+    };
+    head.append(sw,nm,cnt,del);
+    const subs=document.createElement("div"); subs.className="subs";
+    c.subs.forEach((s,si)=>{
+      const chip=document.createElement("span"); chip.className="sub-chip";
+      const inp=document.createElement("input"); inp.id="sub-"+ci+"-"+si; inp.value=s; inp.size=Math.max(3,s.length); inp.setAttribute("aria-label","Subcategory name");
+      inp.oninput=()=>inp.size=Math.max(3,inp.value.length);
+      inp.onchange=async()=>{
+        const v=clean(inp.value);
+        if(!v||c.subs.some((o,i)=>i!==si&&o.toLowerCase()===v.toLowerCase())){inp.value=s;return}
+        c.subs[si]=v; await saveCats(); await renameInEntries(e=>e.category===c.name&&e.subcategory===s,()=>({subcategory:v}));
+      };
+      const k="s"+ci+"-"+si, x=document.createElement("button");
+      x.className="x"+(confirmCat===k?" confirm":""); x.textContent=confirmCat===k?"Delete?":"×"; x.setAttribute("aria-label","Delete "+s);
+      x.onclick=()=>armOrDo(k,()=>{c.subs.splice(si,1);saveCats()});
+      chip.append(inp,x); subs.appendChild(chip);
+    });
+    const add=document.createElement("div"); add.className="addrow";
+    const ai=document.createElement("input"); ai.id="addsub-"+ci; ai.placeholder="Add subcategory"; ai.maxLength=60;
+    const ab=document.createElement("button"); ab.className="btn primary"; ab.textContent="+"; ab.setAttribute("aria-label","Add subcategory to "+c.name);
+    const doAdd=()=>{const v=clean(ai.value); if(!v||c.subs.some(o=>o.toLowerCase()===v.toLowerCase()))return; c.subs.push(v); c.subs.sort((a,b)=>a.localeCompare(b)); saveCats()};
+    ab.onclick=doAdd; ai.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();doAdd()}};
+    add.append(ai,ab);
+    box.append(head,subs,add); g.appendChild(box);
+  });
+}
+function armOrDo(key,fn){
+  if(confirmCat!==key){confirmCat=key;renderGuide();setTimeout(()=>{if(confirmCat===key){confirmCat=null;renderGuide()}},4000);return}
+  confirmCat=null; fn();
+}
+function addMajor(){
+  const v=clean($("newMajor").value); if(!v||cats.some(c=>c.name.toLowerCase()===v.toLowerCase()))return;
+  cats.forEach((c,i)=>{if(!c.color)c.color=PALETTE[i%PALETTE.length]}); // pin existing colors before re-sorting
+  cats.push({name:v,subs:[],color:freeColor()}); cats.sort((a,b)=>a.name.localeCompare(b.name)); $("newMajor").value=""; saveCats();
+}
+$("addMajor").onclick=addMajor;
+$("newMajor").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();addMajor()}};
+
+// ---------- Import page ----------
+let pending=[], ctl=null;
+if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const drop=$("drop");
+["dragover","dragenter"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>{if(e.dataTransfer.files[0]){$("file").files=e.dataTransfer.files;updateRead()}});
+$("file").onchange=updateRead;
+function updateRead(){$("readBtn").disabled=!$("file").files[0]||!sample;$("importMsg").textContent=sample?"":"Statement reading isn't available in this view."}
+
+async function pdfContent(file){
+  const data=new Uint8Array(await file.arrayBuffer());
+  let doc;
+  try{doc=await pdfjsLib.getDocument({data,password:$("pdfpw").value||undefined}).promise}
+  catch(e){if(e&&e.name==="PasswordException")throw{mine:$("pdfpw").value?"That PDF password didn't work. Check it and try again.":"This PDF is password-protected. Enter its password above and try again."};throw{mine:"Couldn't open that PDF. Try a different file."}}
+  let text="";
+  for(let p=1;p<=doc.numPages;p++){
+    const tc=await (await doc.getPage(p)).getTextContent();
+    let line="",lastY=null;
+    tc.items.forEach(it=>{const y=Math.round(it.transform[5]);if(lastY!==null&&Math.abs(y-lastY)>2){text+=line.trim()+"\n";line=""}line+=it.str+" ";lastY=y});
+    text+=line.trim()+"\n\n";
+  }
+  if(text.replace(/\s/g,"").length>200)return{text};
+  const lim=await sample.limits().catch(()=>null);
+  if(!lim||!lim.images)throw{mine:"This PDF is a scan with no readable text. Try a CSV export from your bank instead."};
+  const imgs=[];
+  for(let p=1;p<=Math.min(doc.numPages,lim.images.maxCount);p++){
+    const pg=await doc.getPage(p), vp=pg.getViewport({scale:1.6}), c=document.createElement("canvas");
+    c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
+    imgs.push(await new Promise(r=>c.toBlob(r,"image/jpeg",.85)));
+  }
+  return{images:imgs};
+}
+$("readBtn").onclick=async()=>{
+  const file=$("file").files[0]; if(!file||!sample)return;
+  $("readBtn").disabled=true;$("stopBtn").hidden=false;$("review").hidden=true;
+  const msg=$("importMsg"); msg.textContent="Opening the file…";
+  ctl=new AbortController();
+  try{
+    let content;
+    if(/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name))content=await pdfContent(file);
+    else if(file.type.startsWith("image/"))content={images:[file]};
+    else content={text:await file.text()};
+    const catText=cats.map(c=>c.name+": "+c.subs.join(", ")).join("\n");
+    const prompt=`You are reading a credit card statement for a personal expense tracker in the Philippines. Today is ${today()}.
+Extract every transaction line. For each, give:
+- date: posting or transaction date as YYYY-MM-DD (infer the year from the statement period)
+- description: the merchant or description, cleaned up
+- amount: number in PHP. Positive for purchases/charges/fees/interest. Negative for refunds, credits, reversals, cashback and payments. If a foreign-currency charge shows a PHP equivalent, use the PHP amount.
+- type: "charge" for purchases/fees/interest, "refund" for merchant refunds, reversals, cashback and other credits tied to spending, "payment" for payments toward the card bill.
+- category and subcategory: choose exactly one pair from the list below that best fits the merchant. Use "Other" / "Other" if nothing fits.
+Skip summary lines such as previous balance, total amount due, minimum due, and credit limit.
+Also identify the bank that issued this credit card from the statement's logo, header, or contact details (for example BDO, BPI, HSBC, Metrobank, Security Bank, RCBC, UnionBank, EastWest). Put it in "bank"; use "" if you can't tell.
+
+Categories (Category: subcategories):
+${catText}
+
+Reply with only JSON: {"bank":"BDO","transactions":[{"date":"2026-09-14","description":"SM Supermarket Makati","amount":2345.5,"type":"charge","category":"Groceries","subcategory":"Food"}]}`
+      +(content.text?"\n\nStatement text:\n"+content.text.slice(0,120000):"\n\nThe statement pages are attached as images.");
+    msg.textContent="Claude is reading your statement. This can take up to a minute…";
+    const res=await sample.json(prompt,{signal:ctl.signal,images:content.images,modelTier:"default"});
+    const tx=(res&&Array.isArray(res.transactions))?res.transactions:[];
+    bankOptions($("revBank"),"Not sure");
+    $("revBank").value=matchBank(res&&res.bank);
+    pending=tx.map((t,i)=>{
+      const amount=Math.round(Number(t.amount)*100)/100, date=/^\d{4}-\d{2}-\d{2}$/.test(t.date)?t.date:today();
+      const cat=cats.find(c=>c.name===t.category)||cats.find(c=>c.name==="Other")||cats[0];
+      const sub=cat&&cat.subs.includes(t.subcategory)?t.subcategory:(cat&&cat.subs[0])||"";
+      const dup=expenses.some(e=>e.date===date&&Math.abs(e.amount-amount)<0.005);
+      const payment=t.type==="payment"&&amount<0, refund=amount<0&&!payment;
+      return{key:i,date,note:String(t.description||"").slice(0,120),amount,category:cat?cat.name:"",subcategory:sub,dup,payment,refund,on:!payment&&!dup};
+    }).filter(t=>isFinite(t.amount)&&t.amount!==0);
+    if(!pending.length){msg.textContent="No transactions were found in that file. Check that it's a statement and try again.";return}
+    msg.textContent="";renderReview();
+  }catch(e){
+    if(e&&e.mine)msg.textContent=e.mine;
+    else if(e&&e.code==="no_key")msg.textContent="Statement reading is off. Add an Anthropic API key on the Backup page to turn it on.";
+    else if(e&&e.code==="bad_key")msg.textContent="The Anthropic API key was rejected. Check it on the Backup page.";
+    else if(e&&e.code==="cancelled")msg.textContent="Stopped.";
+    else if(e&&(e.code==="not_granted"||e.code==="sampling_disabled"))msg.textContent="Statement reading needs permission to use Claude. Allow it from the page's Permissions menu to use this.";
+    else if(e&&e.code==="rate_limited")msg.textContent="Too many requests right now. Wait a few minutes and try again.";
+    else if(e&&e.code==="prompt_too_large")msg.textContent="That statement is too long to read at once. Try a shorter file or split it.";
+    else if(e&&e.code==="invalid_json")msg.textContent="Claude's answer couldn't be read as a transaction list. Try again.";
+    else msg.textContent="Something went wrong reading the statement. Try again.";
+  }finally{$("readBtn").disabled=!$("file").files[0];$("stopBtn").hidden=true}
+};
+$("stopBtn").onclick=()=>ctl&&ctl.abort();
+function renderReview(){
+  $("review").hidden=false;
+  const tb=$("revRows"); tb.innerHTML="";
+  pending.forEach(t=>{
+    const tr=document.createElement("tr"); if(t.dup)tr.className="dup";
+    const chk=document.createElement("input"); chk.type="checkbox"; chk.checked=t.on; chk.id="rv-"+t.key;
+    chk.setAttribute("aria-label","Import this row"); chk.onchange=()=>{t.on=chk.checked;tr.className=t.on?"":(t.dup?"dup":"");sumReview()};
+    const dt=document.createElement("input"); dt.type="date"; dt.value=t.date; dt.onchange=()=>t.date=dt.value;
+    const nt=document.createElement("input"); nt.type="text"; nt.value=t.note; nt.onchange=()=>t.note=nt.value.trim();
+    const cs=document.createElement("select"); cats.forEach(c=>cs.add(new Option(c.name))); cs.value=t.category;
+    const ss=document.createElement("select");
+    const fill=()=>{const c=cats.find(c=>c.name===cs.value);ss.innerHTML="";(c?c.subs:[]).forEach(x=>ss.add(new Option(x)));if(c&&c.subs.includes(t.subcategory))ss.value=t.subcategory;t.subcategory=ss.value};
+    fill(); cs.onchange=()=>{t.category=cs.value;fill()}; ss.onchange=()=>t.subcategory=ss.value;
+    [chk,dt,nt,cs,ss].forEach(el=>{const td=document.createElement("td");td.appendChild(el);tr.appendChild(td)});
+    if(t.dup)tr.children[2].insertAdjacentHTML("beforeend",'<span class="tag">Already logged?</span>');
+    if(t.payment)tr.children[2].insertAdjacentHTML("beforeend",'<span class="tag">Card payment</span>');
+    if(t.refund)tr.children[2].insertAdjacentHTML("beforeend",'<span class="tag">Refund / credit</span>');
+    const am=document.createElement("td"); am.className="num"; am.textContent=fmt.format(t.amount); tr.appendChild(am);
+    tb.appendChild(tr);
+  });
+  sumReview();
+}
+function sumReview(){
+  const sel=pending.filter(t=>t.on), tot=sel.reduce((s,t)=>s+t.amount,0);
+  const nRef=sel.filter(t=>t.amount<0).length;
+  $("reviewSum").textContent=`${pending.length} found · ${sel.length} selected · net ${fmt.format(tot)}`+(nRef?` · includes ${nRef} refund${nRef===1?"":"s"}, which reduce spending`:"")+(pending.some(t=>t.payment)?" · card payments are unchecked":"");
+  $("allChk").checked=sel.length===pending.length;
+}
+$("allChk").onchange=()=>{pending.forEach(t=>t.on=$("allChk").checked);renderReview()};
+$("discardBtn").onclick=()=>{pending=[];$("review").hidden=true;$("importMsg").textContent="Discarded."};
+$("importBtn").onclick=async()=>{
+  const sel=pending.filter(t=>t.on&&t.amount!==0); if(!sel.length){$("importMsg").textContent="Select at least one row to import.";return}
+  $("importBtn").disabled=true; let ok=0;
+  for(const t of sel){
+    const e={amount:t.amount,date:t.date,category:t.category,subcategory:t.subcategory,method:t.payment?"Card payment":"Card",card:$("revBank").value,note:t.note,created:Date.now()+ok,source:"statement"};
+    $("importMsg").textContent=`Saving ${ok+1} of ${sel.length}…`;
+    if(db){try{await db.collection("expenses").add(e);ok++}catch(err){if(err.code==="quota_exceeded")break}}
+    else{e.id="l"+e.created;expenses.push(e);ok++}
+  }
+  if(!db){saveLocal();render()}
+  $("importBtn").disabled=false;
+  pending=pending.filter(t=>!sel.includes(t)); if(!pending.length)$("review").hidden=true; else renderReview();
+  $("importMsg").textContent=ok===sel.length?`Imported ${ok} expense${ok===1?"":"s"}. See them on the Ledger page.`:`Imported ${ok} of ${sel.length}. The rest couldn't be saved; try again.`;
+};
+
+// ---------- Double-entry check ----------
+let dupIgnore=[];
+const pairKey=(a,b)=>[a.id,b.id].sort().join("~");
+function findDups(){
+  const out=[], seen=new Set(), list=[...expenses].sort((a,b)=>a.date.localeCompare(b.date));
+  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+    const a=list[i], b=list[j];
+    const days=(new Date(b.date+"T00:00")-new Date(a.date+"T00:00"))/864e5;
+    if(days>3)break;
+    if(Math.abs(a.amount-b.amount)>=0.005)continue;
+    const aS=a.source==="statement", bS=b.source==="statement";
+    const cross=aS!==bS, identical=days===0&&(a.note||"").toLowerCase()===(b.note||"").toLowerCase();
+    if(!cross&&!identical)continue;
+    const k=pairKey(a,b); if(seen.has(k)||dupIgnore.includes(k))continue; seen.add(k);
+    const [man,stm]=cross?(aS?[b,a]:[a,b]):[a,b];
+    out.push({k,man,stm,cross});
+  }
+  return out;
+}
+function cellFor(e){const td=document.createElement("td");td.innerHTML=`<div class="date"></div><div></div><div class="sub"></div>`;
+  td.children[0].textContent=e.date;td.children[1].textContent=e.note||"—";td.children[2].textContent=e.category+(e.subcategory?" · "+e.subcategory:"");return td}
+function renderDups(){
+  const pairs=findDups(), tb=$("dupRows"); tb.innerHTML="";
+  $("dupSum").textContent=pairs.length?pairs.length+" to review":"";
+  document.querySelectorAll('nav a[data-page="import"]').forEach(a=>a.textContent=pairs.length?`Import (${pairs.length})`:"Import");
+  if(!pairs.length){tb.innerHTML='<tr><td colspan="4" class="empty">No double entries found.</td></tr>';return}
+  pairs.forEach(p=>{
+    const tr=document.createElement("tr");
+    tr.append(cellFor(p.man),cellFor(p.stm));
+    const am=document.createElement("td");am.className="num";am.textContent=fmt.format(p.man.amount);tr.append(am);
+    const act=document.createElement("td");act.style.whiteSpace="nowrap";
+    const mk=(txt,fn,primary)=>{const b=document.createElement("button");b.className="btn"+(primary?" primary":"");b.textContent=txt;b.style.margin="2px";b.onclick=fn;return b};
+    act.append(
+      mk(p.cross?"Keep statement":"Keep first",()=>resolveDup(p,p.cross?p.man:p.stm),true),
+      mk(p.cross?"Keep typed":"Keep second",()=>resolveDup(p,p.cross?p.stm:p.man)),
+      mk("Not a duplicate",()=>ignoreDup(p))
+    );
+    tr.append(act); tb.append(tr);
+  });
+}
+async function resolveDup(p,drop){
+  const keep=drop===p.man?p.stm:p.man;
+  // Keep the hand-picked category/note when the statement row wins
+  const patch=(drop===p.man&&p.cross)?{category:p.man.category,subcategory:p.man.subcategory||"",note:p.man.note||keep.note||"",method:p.man.method||keep.method||"Card"}:null;
+  if(db){try{if(patch)await db.collection("expenses").doc(keep.id).update(patch);await db.collection("expenses").doc(drop.id).delete();$("dupMsg").textContent="Removed the extra entry."}catch(e){$("dupMsg").textContent="Couldn't remove that entry. Try again."}}
+  else{if(patch)Object.assign(keep,patch);expenses=expenses.filter(e=>e.id!==drop.id);saveLocal();render();$("dupMsg").textContent="Removed the extra entry."}
+}
+async function ignoreDup(p){
+  dupIgnore=[...dupIgnore,p.k].slice(-2000); renderDups();
+  if(db){try{await db.doc("settings/dupIgnore").set({keys:dupIgnore})}catch(e){}}
+}
+
+// ---------- Backup page ----------
+function backupJSON(){
+  return JSON.stringify({app:"Expense Tracker",version:1,exportedAt:new Date().toISOString(),currency:"PHP",budget,categories:cats,
+    expenses:expenses.map(({id,amount,date,category,subcategory,method,card,note,created,source})=>({id,amount,date,category,subcategory,method,card,note,created,source}))},null,1);
+}
+const stamp=()=>{const d=new Date();return today()+" "+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
+function showLast(){
+  const el=$("lastBackup"); el.textContent="";
+  if(!lastBackup){el.textContent="No Google Drive backup yet.";el.className="status";return}
+  el.className="okline";
+  el.append("Last backup: "+new Date(lastBackup.at).toLocaleString()+" · "+lastBackup.count+" entries · "+lastBackup.title);
+  if(lastBackup.link&&/^https:\/\//.test(lastBackup.link)){const a=document.createElement("a");a.href=lastBackup.link;a.target="_blank";a.rel="noopener";a.textContent="Open in Drive";el.append(" · ",a)}
+}
+$("driveBtn").onclick=async()=>{
+  const msg=$("driveMsg");
+  if(!mcp){msg.textContent="Google Drive isn't reachable from this view.";return}
+  $("driveBtn").disabled=true; msg.textContent="Saving to Google Drive…";
+  const title="Expense Tracker backup "+stamp()+".json";
+  try{
+    const r=await mcp.callTool("Google Drive","create_file",{title,textContent:backupJSON(),contentMimeType:"application/json",disableConversionToGoogleType:true});
+    const p=(r&&r.payload&&typeof r.payload==="object")?r.payload:{};
+    const f=p.file||p;
+    lastBackup={at:Date.now(),count:expenses.length,title,link:f.webViewLink||f.alternateLink||f.url||""};
+    msg.textContent="Backed up.";
+    if(db){try{await db.doc("settings/backup").set(lastBackup)}catch(e){}}
+    showLast();
+  }catch(e){
+    const c=e&&e.code;
+    msg.textContent=
+      c==="needs_reauth"?"Your Google Drive connection expired. Reconnect Google Drive in claude.ai Settings → Connectors, then try again.":
+      c==="server_not_connected"?"Google Drive isn't connected. Add Google Drive in claude.ai Settings → Connectors, then try again.":
+      c==="selection_required"?"Choose which Google Drive connection to use when claude.ai asks, then try again.":
+      c==="not_in_manifest"||c==="approval_required"?"Google Drive access wasn't allowed for this page. Allow it from the page's Permissions menu, then try again.":
+      c==="blocked_by_policy"?"Your organization blocks this page from saving to Google Drive.":
+      c==="tool_error"?"Google Drive refused the file: "+(e.message||"unknown reason")+".":
+      c==="server_unavailable"||c==="upstream_error"?"Google Drive didn't respond. Check Drive for a new backup file before trying again.":
+      c==="not_granted"||c==="capability_disabled"?"Google Drive isn't reachable from this view.":
+      "The backup didn't finish. Try again.";
+  }finally{$("driveBtn").disabled=false}
+};
+$("dlBtn").onclick=async()=>{
+  if(!downloads){$("dlMsg").textContent="Downloads aren't available in this view.";return}
+  try{await downloads.save({filename:"Expense Tracker backup "+today()+".json",data:new Blob([backupJSON()],{type:"application/json"})});$("dlMsg").textContent="Saved."}
+  catch(e){$("dlMsg").textContent="The download didn't start."}
+};
+// CSV export
+function csvRows(){
+  let a=$("csvFrom").value, b=$("csvTo").value; if(a&&b&&a>b)[a,b]=[b,a];
+  return expenses.filter(e=>(!a||e.date>=a)&&(!b||e.date<=b)).sort((x,y)=>x.date.localeCompare(y.date)||(x.created||0)-(y.created||0));
+}
+function buildCSV(list){
+  // Quote every text cell; prefix cells starting with = + - @ so spreadsheets don't run them as formulas
+  const q=v=>{let s=String(v==null?"":v);if(/^[=+\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};
+  const head=["Date","Category","Subcategory","Note","Paid with","Card bank","Amount (PHP)","Source"];
+  const lines=list.map(e=>[q(e.date),q(e.category),q(e.subcategory),q(e.note),q(e.method),q(e.card),e.amount.toFixed(2),q(e.source==="statement"?"Statement":"Typed in")].join(","));
+  return "﻿"+[head.join(","),...lines].join("\r\n")+"\r\n";
+}
+const csvName=()=>{const a=$("csvFrom").value,b=$("csvTo").value;return "Expense Tracker "+(a||b?(a||"start")+" to "+(b||today()):"all expenses "+today())};
+$("csvBtn").onclick=async()=>{
+  const list=csvRows(); if(!list.length){$("csvMsg").textContent="No expenses in that date range.";return}
+  if(!downloads){$("csvMsg").textContent="Downloads aren't available in this view. Try Save to Google Sheets instead.";return}
+  try{await downloads.save({filename:csvName()+".csv",data:new Blob([buildCSV(list)],{type:"text/csv"})});$("csvMsg").textContent=`Saved ${list.length} expenses.`}
+  catch(e){$("csvMsg").textContent="The download didn't start."}
+};
+$("csvDriveBtn").onclick=async()=>{
+  const list=csvRows(), msg=$("csvMsg"); if(!list.length){msg.textContent="No expenses in that date range.";return}
+  if(!mcp){msg.textContent="Google Drive isn't reachable from this view.";return}
+  $("csvDriveBtn").disabled=true; msg.textContent="Saving to Google Sheets…";
+  try{
+    const r=await mcp.callTool("Google Drive","create_file",{title:csvName(),textContent:buildCSV(list).slice(1),contentMimeType:"text/csv"});
+    const p=(r&&r.payload&&typeof r.payload==="object")?r.payload:{}, f=p.file||p, link=f.webViewLink||f.alternateLink||f.url||"";
+    msg.textContent=`Saved ${list.length} expenses as a Google Sheet named "${csvName()}".`;
+    if(/^https:\/\//.test(link)){const el=document.createElement("a");el.href=link;el.target="_blank";el.rel="noopener";el.textContent="Open it";el.style.color="var(--accent)";msg.append(" ",el)}
+  }catch(e){
+    const c=e&&e.code;
+    msg.textContent=c==="needs_reauth"?"Your Google Drive connection expired. Reconnect it in claude.ai Settings → Connectors.":
+      c==="server_not_connected"?"Google Drive isn't connected. Add it in claude.ai Settings → Connectors.":
+      c==="not_in_manifest"||c==="approval_required"?"Google Drive access wasn't allowed for this page. Allow it from the page's Permissions menu.":
+      c==="server_unavailable"||c==="upstream_error"?"Google Drive didn't respond. Check Drive for the sheet before trying again.":
+      c==="tool_error"?"Google Drive refused the file: "+(e.message||"unknown reason")+".":"The export didn't finish. Try again.";
+  }finally{$("csvDriveBtn").disabled=false}
+};
+
+$("restoreFile").onchange=()=>{$("restoreBtn").disabled=!$("restoreFile").files[0];$("restoreMsg").textContent=""};
+$("restoreBtn").onclick=async()=>{
+  const msg=$("restoreMsg"); let data;
+  try{data=JSON.parse(await $("restoreFile").files[0].text())}catch(e){msg.textContent="That file isn't a valid backup. Choose an Expense Tracker .json backup.";return}
+  if(!data||!["Expense Tracker","Pocket Ledger"].includes(data.app)||!Array.isArray(data.expenses)){msg.textContent="That file isn't an Expense Tracker backup.";return}
+  $("restoreBtn").disabled=true;
+  if(Array.isArray(data.categories)&&data.categories.every(c=>c&&typeof c.name==="string"&&Array.isArray(c.subs))){cats=data.categories;await saveCats()}
+  if(typeof data.budget==="number"){budget=data.budget;if(db){try{await db.doc("settings/budget").set({monthly:budget})}catch(e){}}}
+  const have=new Set(expenses.map(e=>e.id)), sig=new Set(expenses.map(e=>e.date+"|"+e.amount+"|"+(e.note||"")));
+  let added=0, skipped=0;
+  for(const x of data.expenses){
+    const amount=Number(x.amount); if(!isFinite(amount)||amount===0||!/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")){skipped++;continue}
+    if(have.has(x.id)||sig.has(x.date+"|"+amount+"|"+(x.note||""))){skipped++;continue}
+    const e={amount,date:x.date,category:String(x.category||"Other"),subcategory:String(x.subcategory||""),method:String(x.method||""),card:String(x.card||"").slice(0,40),note:String(x.note||"").slice(0,120),created:Number(x.created)||Date.now()};
+    msg.textContent=`Restoring ${added+1}…`;
+    if(db){try{const id=typeof x.id==="string"&&/^[A-Za-z0-9_-]{1,100}$/.test(x.id)?x.id:undefined;await db.collection("expenses").doc(id||db.collection("expenses").doc().id).set(e);added++}catch(err){if(err.code==="quota_exceeded")break}}
+    else{e.id=x.id||"l"+e.created+added;expenses.push(e);added++}
+  }
+  if(!db){saveLocal()}
+  render(); $("restoreBtn").disabled=false;
+  msg.textContent=`Restored ${added} entr${added===1?"y":"ies"}${skipped?`, skipped ${skipped} already in your ledger`:""}.`;
+};
+
+// ---------- Statement reading through the Anthropic API ----------
+const CLAUDE_MODEL="claude-sonnet-5-5";
+const KEY_LS="et-anthropic-key";
+const getKey=()=>{try{return localStorage.getItem(KEY_LS)||""}catch(e){return ""}};
+const blobToB64=b=>new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(String(f.result).split(",")[1]);f.onerror=rej;f.readAsDataURL(b)});
+const anthropicSample={
+  limits:async()=>({images:{maxCount:10}}),
+  json:async(prompt,opts={})=>{
+    const key=getKey(); if(!key)throw{code:"no_key"};
+    const content=[];
+    for(const b of (opts.images||[])){
+      const mt=/^image\/(jpeg|png|webp|gif)$/.test(b.type||"")?b.type:"image/jpeg";
+      content.push({type:"image",source:{type:"base64",media_type:mt,data:await blobToB64(b)}});
+    }
+    content.push({type:"text",text:prompt+"\n\nReply with the JSON only, no other text."});
+    let r;
+    try{
+      r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal:opts.signal,
+        headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:16000,messages:[{role:"user",content}]})});
+    }catch(e){throw{code:e&&e.name==="AbortError"?"cancelled":"upstream_error"}}
+    if(r.status===401||r.status===403)throw{code:"bad_key"};
+    if(r.status===429)throw{code:"rate_limited"};
+    if(r.status===413)throw{code:"prompt_too_large"};
+    if(!r.ok)throw{code:"upstream_error"};
+    const j=await r.json();
+    const text=(j.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
+    const m=text.match(/\{[\s\S]*\}/);
+    try{return JSON.parse(m?m[0]:text)}catch(e){throw{code:"invalid_json"}}
+  }
+};
+function showKeyState(){$("keyMsg").textContent=getKey()?"A key is saved in this browser. Statement reading is on.":"No key saved. Statement reading is off."}
+$("saveKey").onclick=()=>{const v=$("apiKey").value.trim();if(!/^sk-ant-/.test(v)){$("keyMsg").textContent="That doesn't look like an Anthropic key. It starts with sk-ant-.";return}try{localStorage.setItem(KEY_LS,v)}catch(e){}$("apiKey").value="";showKeyState()};
+$("clearKey").onclick=()=>{try{localStorage.removeItem(KEY_LS)}catch(e){}showKeyState()};
+
+// ---------- Plain browser downloads ----------
+downloads={save:async({filename,data})=>{const a=document.createElement("a");a.href=URL.createObjectURL(data);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}};
+
+// ---------- Boot ----------
+fillSelects(); renderGuide(); render();
+showPage(PAGES.includes(location.hash.slice(1))?location.hash.slice(1):"ledger");
+sample=anthropicSample; updateRead(); showKeyState();
+let gateNote="";
+const cfg=window.FIREBASE_CONFIG;
+if(!window.firebase||!cfg||!cfg.apiKey||/^PASTE/.test(cfg.apiKey)){
+  $("gateMsg").textContent="This copy isn't connected to a database yet. Fill in firebase-config.js as described in README.md.";
+  $("signInBtn").disabled=true;
+}else{
+  firebase.initializeApp(cfg);
+  const auth=firebase.auth();
+  $("signInBtn").onclick=()=>{$("gateMsg").textContent="";auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>{$("gateMsg").textContent=e&&e.code==="auth/popup-blocked"?"Your browser blocked the sign-in window. Allow pop-ups for this site and try again.":"Sign-in didn't finish. Try again."})};
+  $("signOutBtn").onclick=()=>auth.signOut();
+  let unsubs=[];
+  const onErr=e=>{
+    if(e&&e.code==="permission-denied"){gateNote="The account "+(auth.currentUser&&auth.currentUser.email||"")+" isn't on the family list. Ask the person who set this up to add it, or sign in with a different account.";auth.signOut()}
+    else $("status").textContent="Lost connection. Reload to reconnect.";
+  };
+  auth.onAuthStateChanged(u=>{
+    unsubs.forEach(f=>f()); unsubs=[];
+    if(!u){db=null;expenses=[];render();$("gate").hidden=false;$("gateMsg").textContent=gateNote;$("status").textContent="";return}
+    gateNote=""; $("gate").hidden=true; $("who").textContent=u.email||u.displayName||"";
+    db=firebase.firestore();
+    $("status").textContent="Synced with family";
+    unsubs.push(db.doc("settings/categories").onSnapshot(s=>{
+      if(s.exists&&Array.isArray(s.data().list)){
+        if(focusedIn("#guide"))return;
+        cats=JSON.parse(JSON.stringify(s.data().list));fillSelects();renderGuide();render();
+      }
+    },onErr));
+    unsubs.push(db.collection("expenses").onSnapshot(snap=>{
+      expenses=snap.docs.map(d=>({id:d.id,...d.data()}));render();
+      if(!focusedIn("#guide"))renderGuide();
+    },onErr));
+    unsubs.push(db.doc("settings/budget").onSnapshot(s=>{budget=s.exists?(s.data().monthly||0):0;render()},onErr));
+    unsubs.push(db.doc("settings/dupIgnore").onSnapshot(s=>{dupIgnore=s.exists&&Array.isArray(s.data().keys)?s.data().keys:[];renderDups()},onErr));
+  });
+}
+</script>
+</body>
+</html>
