@@ -1085,7 +1085,19 @@ if(!window.firebase||!cfg||!cfg.apiKey||/^PASTE/.test(cfg.apiKey)){
 }else{
   firebase.initializeApp(cfg);
   const auth=firebase.auth();
-  $("signInBtn").onclick=()=>{$("gateMsg").textContent="";auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>{$("gateMsg").textContent=e&&e.code==="auth/popup-blocked"?"Your browser blocked the sign-in window. Allow pop-ups for this site and try again.":"Sign-in didn't finish. Try again."})};
+  $("signInBtn").onclick=()=>{$("gateMsg").textContent="";auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>{
+    const c=(e&&e.code)||"unknown";
+    const why={
+      "auth/popup-blocked":"Your browser blocked the sign-in window. Allow pop-ups for this site and try again.",
+      "auth/popup-closed-by-user":"The sign-in window was closed before sign-in finished. Try again.",
+      "auth/cancelled-popup-request":"Another sign-in window was already open. Try again.",
+      "auth/operation-not-allowed":"Google sign-in isn't turned on in Firebase. Enable it under Authentication → Sign-in method → Google.",
+      "auth/unauthorized-domain":"This site isn't on Firebase's authorized domains list. Add "+location.hostname+" under Authentication → Settings → Authorized domains.",
+      "auth/network-request-failed":"Couldn't reach Google. Check your connection or turn off ad blockers for this site.",
+      "auth/internal-error":"Google sign-in failed inside the pop-up. Allow third-party cookies for this site, or try another browser."
+    }[c]||"Sign-in didn't finish.";
+    $("gateMsg").textContent=why+" (Error code: "+c+")";
+  })};
   $("signOutBtn").onclick=()=>auth.signOut();
   let unsubs=[];
   const onErr=e=>{
